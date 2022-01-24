@@ -12,6 +12,7 @@ description = "An implementation of a lattice-based additive homomorphic encrypt
 [dependencies]
 rand = {version="0.6", features=["wasm-bindgen"]}
 modinverse = "0.1.1"
+serde = {version= "1.0.135", features = ["derive","rc"]}
 
 [dev-dependencies]
 bencher = "0.1.5"

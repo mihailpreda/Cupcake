@@ -187,7 +187,7 @@ use integer_arith::scalar::Scalar;
 use integer_arith::{SuperTrait, ArithUtils};
 use traits::*;
 use std::sync::Arc;
-
+use serde::{Serialize, Deserialize};
 /// Plaintext type
 pub type FVPlaintext<T> = Vec<T>;
 /// Default plaintext type
@@ -199,6 +199,7 @@ pub type FVCiphertext<T> = (RqPoly<T>, RqPoly<T>);
 pub type DefaultSchemeType = FV<Scalar>;
 
 /// SecretKey type
+#[derive(Serialize, Deserialize)]
 pub struct SecretKey<T>(RqPoly<T>);
 use rqpoly::{FiniteRingElt, RqPoly, RqPolyContext};
 

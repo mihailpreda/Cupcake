@@ -8,10 +8,10 @@ use crate::integer_arith::util::compute_harvey_ratio;
 use crate::utils::reverse_bits_perm;
 use std::sync::Arc;
 use crate::traits::*; 
-
+use serde::{Deserialize,Serialize};
 /// Holds the context information for RqPolys, including degree n, modulus q, and optionally precomputed
 /// roots of unity for NTT purposes.
-#[derive(Debug)]
+#[derive(Debug,Serialize, Deserialize)]
 pub struct RqPolyContext<T> {
     pub n: usize,
     pub q: T,
@@ -23,7 +23,7 @@ pub struct RqPolyContext<T> {
 }
 
 /// Polynomials in Rq = Zq[x]/(x^n + 1).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug,Serialize, Deserialize)] 
 pub struct RqPoly<T> {
     pub(crate) context: Option<Arc<RqPolyContext<T>>>,
     pub coeffs: Vec<T>,

@@ -9,12 +9,12 @@ use rand::{FromEntropy};
 use super::Rng; 
 use ::std::ops;
 pub use std::sync::Arc;
-
+use serde::{Deserialize,Serialize};
 impl Rng for StdRng {}
 impl Rng for ThreadRng {}
 
 /// The ScalarContext class contains useful auxilliary information for fast modular reduction against a Scalar instance.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone,Deserialize,Serialize)]
 struct ScalarContext {
     barrett_ratio: (u64, u64),
 }
@@ -44,7 +44,7 @@ impl ScalarContext {
 }
 
 /// The Scalar struct is a wrapper around u64 which has optional fast modular arithmetic through ScalarContext.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone,Deserialize,Serialize)]
 pub struct Scalar {
     context: Option<ScalarContext>,
     rep: u64,
