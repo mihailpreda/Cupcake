@@ -2,37 +2,40 @@
 //
 // This source code is licensed under the MIT license found in the
 // LICENSE file in the root directory of this source tree.
-use crate::integer_arith::{SuperTrait, ArithUtils};
-use crate::polyarith::lazy_ntt::{lazy_ntt_u64, lazy_inverse_ntt_u64};
-use crate::integer_arith::util::compute_harvey_ratio; 
+use crate::integer_arith::util::compute_harvey_ratio;
+use crate::integer_arith::{ArithUtils, SuperTrait};
+use crate::polyarith::lazy_ntt::{lazy_inverse_ntt_u64, lazy_ntt_u64};
+use crate::traits::*;
 use crate::utils::reverse_bits_perm;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use crate::traits::*; 
-use serde::{Deserialize,Serialize};
 /// Holds the context information for RqPolys, including degree n, modulus q, and optionally precomputed
 /// roots of unity for NTT purposes.
-#[derive(Debug,Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct RqPolyContext<T> {
     pub n: usize,
     pub q: T,
     pub is_ntt_enabled: bool,
     pub roots: Vec<T>,
     pub invroots: Vec<T>,
-    pub scaled_roots: Vec<T>, // for use in lazy ntt
+    pub scaled_roots: Vec<T>,    // for use in lazy ntt
     pub scaled_invroots: Vec<T>, // for use in lazy inverse ntt
 }
 
 /// Polynomials in Rq = Zq[x]/(x^n + 1).
-#[derive(Clone, Debug,Serialize, Deserialize)] 
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RqPoly<T> {
     pub(crate) context: Option<Arc<RqPolyContext<T>>>,
     pub coeffs: Vec<T>,
     pub is_ntt_form: bool,
 }
 
-impl<T> RqPoly<T> where T:Clone{
-    pub fn new_without_context(coeffs: &[T], is_ntt_form:bool) -> Self{
-        RqPoly{
+impl<T> RqPoly<T>
+where
+    T: Clone,
+{
+    pub fn new_without_context(coeffs: &[T], is_ntt_form: bool) -> Self {
+        RqPoly {
             context: None,
             coeffs: coeffs.to_vec(),
             is_ntt_form,
@@ -40,31 +43,41 @@ impl<T> RqPoly<T> where T:Clone{
     }
 }
 
-impl<T> RqPoly<T> where T:Clone + ArithUtils<T>{
-    pub fn new(context: Arc<RqPolyContext<T>>) -> Self{
-        let n = context.n; 
-        RqPoly{
-            context: Some(context), 
-            coeffs: vec![T::zero(); n], 
-            is_ntt_form: false
+impl<T> RqPoly<T>
+where
+    T: Clone + ArithUtils<T>,
+{
+    pub fn new(context: Arc<RqPolyContext<T>>) -> Self {
+        let n = context.n;
+        RqPoly {
+            context: Some(context),
+            coeffs: vec![T::zero(); n],
+            is_ntt_form: false,
         }
     }
 
-    pub(crate) fn set_context(&mut self, context: Arc<RqPolyContext<T>>){
+    pub(crate) fn set_context(&mut self, context: Arc<RqPolyContext<T>>) {
         self.context = Some(context);
     }
 }
 
-impl<T> PartialEq for RqPoly<T> where T: PartialEq {
+impl<T> PartialEq for RqPoly<T>
+where
+    T: PartialEq,
+{
     fn eq(&self, other: &Self) -> bool {
         if self.coeffs.len() != other.coeffs.len() {
-            return false
+            return false;
         }
-        for i in 0..self.coeffs.len(){
-            if self.coeffs[i] != other.coeffs[i] { return false; }
+        for i in 0..self.coeffs.len() {
+            if self.coeffs[i] != other.coeffs[i] {
+                return false;
+            }
         }
-        if self.is_ntt_form != other.is_ntt_form { return false; }
-         true
+        if self.is_ntt_form != other.is_ntt_form {
+            return false;
+        }
+        true
     }
 }
 
@@ -90,8 +103,8 @@ where
             is_ntt_enabled: false,
             invroots: vec![],
             roots: vec![],
-            scaled_roots: vec![], 
-            scaled_invroots: vec![], 
+            scaled_roots: vec![],
+            scaled_invroots: vec![],
         };
         a.compute_roots();
         a.compute_scaled_roots();
@@ -99,17 +112,23 @@ where
         a
     }
 
-    fn compute_scaled_roots(&mut self){
-        if !self.is_ntt_enabled{
-            return; 
+    fn compute_scaled_roots(&mut self) {
+        if !self.is_ntt_enabled {
+            return;
         }
         // compute scaled roots as wiprime = wi
         for i in 0..self.n {
-            self.scaled_roots.push(T::from(compute_harvey_ratio(self.roots[i].rep(), self.q.rep()))); 
+            self.scaled_roots.push(T::from(compute_harvey_ratio(
+                self.roots[i].rep(),
+                self.q.rep(),
+            )));
         }
 
         for i in 0..self.n {
-            self.scaled_invroots.push(T::from(compute_harvey_ratio(self.invroots[i].rep(), self.q.rep()))); 
+            self.scaled_invroots.push(T::from(compute_harvey_ratio(
+                self.invroots[i].rep(),
+                self.q.rep(),
+            )));
         }
     }
 
@@ -122,7 +141,7 @@ where
             return;
         }
         let phi = root.unwrap();
-        
+
         let mut s = T::one();
         for _ in 0..self.n {
             roots.push(s.clone());
@@ -130,7 +149,7 @@ where
         }
         reverse_bits_perm(&mut roots);
         self.roots = roots;
-        
+
         let mut invroots: Vec<T> = vec![];
         for x in self.roots.iter() {
             invroots.push(T::inv_mod(x, &self.q));
@@ -166,36 +185,29 @@ where
 
 impl<T> RqPoly<T>
 where
-    T: SuperTrait<T>
+    T: SuperTrait<T>,
 {
-    fn lazy_ntt(&mut self)
-    {
+    fn lazy_ntt(&mut self) {
         let context = self.context.as_ref().unwrap();
         if self.is_ntt_form {
             panic!("is already in ntt");
         }
         let q = context.q.rep();
 
-        let mut coeffs_u64: Vec<u64> = self.coeffs.iter()
-        .map(|elm| elm.rep())
-        .collect();
+        let mut coeffs_u64: Vec<u64> = self.coeffs.iter().map(|elm| elm.rep()).collect();
 
-        let roots_u64: Vec<u64> = context.roots.iter()
-        .map(|elm| elm.rep())
-        .collect();
-        let scaledroots_u64: Vec<u64> = context.scaled_roots.iter()
-        .map(|elm| elm.rep())
-        .collect();
+        let roots_u64: Vec<u64> = context.roots.iter().map(|elm| elm.rep()).collect();
+        let scaledroots_u64: Vec<u64> = context.scaled_roots.iter().map(|elm| elm.rep()).collect();
 
-        lazy_ntt_u64(&mut coeffs_u64, &roots_u64, &scaledroots_u64, q); 
+        lazy_ntt_u64(&mut coeffs_u64, &roots_u64, &scaledroots_u64, q);
 
-        for (coeff, coeff_u64) in self.coeffs.iter_mut().zip(coeffs_u64.iter()){
-            *coeff = T::modulus(&T::from(*coeff_u64), &context.q); 
+        for (coeff, coeff_u64) in self.coeffs.iter_mut().zip(coeffs_u64.iter()) {
+            *coeff = T::modulus(&T::from(*coeff_u64), &context.q);
         }
         self.set_ntt_form(true);
     }
 
-    fn lazy_inverse_ntt(&mut self){
+    fn lazy_inverse_ntt(&mut self) {
         let context = self.context.as_ref().unwrap();
         if !self.is_ntt_form {
             panic!("is already not in ntt");
@@ -204,22 +216,25 @@ where
         let q = context.q.clone();
         let ninv = T::inv_mod(&T::from_u32(n as u32, &q), &q);
 
-        let mut coeffs_u64: Vec<u64> = self.coeffs.iter()
-        .map(|elm| elm.rep())
-        .collect();
+        let mut coeffs_u64: Vec<u64> = self.coeffs.iter().map(|elm| elm.rep()).collect();
 
-        let invroots_u64: Vec<u64> = context.invroots.iter()
-        .map(|elm| elm.rep())
-        .collect();
+        let invroots_u64: Vec<u64> = context.invroots.iter().map(|elm| elm.rep()).collect();
 
-        let scaled_invroots_u64: Vec<u64> = context.scaled_invroots.iter()
-        .map(|elm| elm.rep())
-        .collect();
+        let scaled_invroots_u64: Vec<u64> = context
+            .scaled_invroots
+            .iter()
+            .map(|elm| elm.rep())
+            .collect();
 
-        lazy_inverse_ntt_u64(&mut coeffs_u64, &invroots_u64, &scaled_invroots_u64, q.rep()); 
+        lazy_inverse_ntt_u64(
+            &mut coeffs_u64,
+            &invroots_u64,
+            &scaled_invroots_u64,
+            q.rep(),
+        );
 
-        for (coeff, coeff_u64) in self.coeffs.iter_mut().zip(coeffs_u64.iter()){
-            *coeff = T::mul_mod(&ninv, &T::from(*coeff_u64), &context.q); 
+        for (coeff, coeff_u64) in self.coeffs.iter_mut().zip(coeffs_u64.iter()) {
+            *coeff = T::mul_mod(&ninv, &T::from(*coeff_u64), &context.q);
         }
         self.set_ntt_form(false);
     }
@@ -228,7 +243,7 @@ where
 // NTT implementation(lazy version)
 impl<T> NTT<T> for RqPoly<T>
 where
-    T: SuperTrait<T>
+    T: SuperTrait<T>,
 {
     fn is_ntt_form(&self) -> bool {
         self.is_ntt_form
@@ -248,7 +263,9 @@ where
 }
 
 impl<T> FastPolyMultiply<T> for RqPoly<T>
-where T: SuperTrait<T>{
+where
+    T: SuperTrait<T>,
+{
     fn multiply_fast(&self, other: &Self) -> Self {
         let mut a: Self = self.clone();
         let mut b = other.clone();
@@ -278,7 +295,6 @@ where T: SuperTrait<T>{
         c
     }
 }
-
 
 impl<T> FiniteRingElt for RqPoly<T>
 where
@@ -420,13 +436,13 @@ mod tests {
     }
 
     #[test]
-    fn test_find_root_scalar(){
+    fn test_find_root_scalar() {
         let context2 = RqPolyContext::new(4, &Scalar::new_modulus(12289));
         assert_eq!(context2.find_root().unwrap(), Scalar::from_u64_raw(8246u64));
     }
 
     #[test]
-    fn test_lazy_ntt(){
+    fn test_lazy_ntt() {
         let q = Scalar::new_modulus(18014398492704769u64);
         let context = RqPolyContext::new(4, &q);
         let arc = Arc::new(context);
@@ -434,14 +450,14 @@ mod tests {
         let mut aa = a.clone();
 
         aa.forward_transform();
-        a.lazy_ntt(); 
+        a.lazy_ntt();
 
-        // assert 
-        assert_eq!(aa.coeffs, a.coeffs); 
+        // assert
+        assert_eq!(aa.coeffs, a.coeffs);
     }
 
     #[test]
-    fn test_lazy_inverse_ntt(){
+    fn test_lazy_inverse_ntt() {
         let q = Scalar::new_modulus(18014398492704769u64);
         let context = RqPolyContext::new(4, &q);
         let arc = Arc::new(context);
@@ -449,9 +465,9 @@ mod tests {
         a.set_ntt_form(true);
         let mut aa = a.clone();
         aa.inverse_transform();
-        a.lazy_inverse_ntt(); 
+        a.lazy_inverse_ntt();
 
-        // assert 
-        assert_eq!(aa.coeffs, a.coeffs); 
+        // assert
+        assert_eq!(aa.coeffs, a.coeffs);
     }
 }

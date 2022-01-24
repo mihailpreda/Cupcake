@@ -168,26 +168,25 @@
 //! assert_eq!(actual, expected);
 //! ```
 
-
 pub mod integer_arith;
 pub mod polyarith;
-#[cfg(feature = "bench")]
-pub mod rqpoly;
-#[cfg(not(feature = "bench"))]
-pub mod rqpoly;
-pub mod traits;
-mod serialize;
-mod utils;
 #[cfg(feature = "bench")]
 pub mod randutils;
 #[cfg(not(feature = "bench"))]
 mod randutils;
+#[cfg(feature = "bench")]
+pub mod rqpoly;
+#[cfg(not(feature = "bench"))]
+pub mod rqpoly;
+mod serialize;
+pub mod traits;
+mod utils;
 
 use integer_arith::scalar::Scalar;
-use integer_arith::{SuperTrait, ArithUtils};
-use traits::*;
+use integer_arith::{ArithUtils, SuperTrait};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use serde::{Serialize, Deserialize};
+use traits::*;
 /// Plaintext type
 pub type FVPlaintext<T> = Vec<T>;
 /// Default plaintext type
@@ -229,24 +228,25 @@ where
 
 impl<T> FV<T>
 where
-T: ArithUtils<T>{
-    fn convert_pt_u8_to_scalar(&self, pt: &DefaultFVPlaintext) -> FVPlaintext<T>{
-        if T::to_u64(&self.t) != 256u64{
+    T: ArithUtils<T>,
+{
+    fn convert_pt_u8_to_scalar(&self, pt: &DefaultFVPlaintext) -> FVPlaintext<T> {
+        if T::to_u64(&self.t) != 256u64 {
             panic!("plaintext modulus should be 256")
         }
         let mut pt1 = vec![];
-        for pt_coeff in pt.iter(){
-            pt1.push(T::from_u32(*pt_coeff as u32,  &self.t));
+        for pt_coeff in pt.iter() {
+            pt1.push(T::from_u32(*pt_coeff as u32, &self.t));
         }
         pt1
     }
 
-    fn convert_pt_scalar_to_u8(&self, pt: FVPlaintext<T>) -> DefaultFVPlaintext{
-        if T::to_u64(&self.t) != 256u64{
+    fn convert_pt_scalar_to_u8(&self, pt: FVPlaintext<T>) -> DefaultFVPlaintext {
+        if T::to_u64(&self.t) != 256u64 {
             panic!("plaintext modulus should be 256")
         }
         let mut pt1 = vec![];
-        for pt_coeff in pt.iter(){
+        for pt_coeff in pt.iter() {
             pt1.push(T::to_u64(pt_coeff) as u8);
         }
         pt1
@@ -274,7 +274,6 @@ where
     }
 }
 
-
 impl<T> AddAndSubtract<FVCiphertext<T>, DefaultFVPlaintext> for FV<T>
 where
     RqPoly<T>: FiniteRingElt,
@@ -296,7 +295,6 @@ where
     }
 }
 
-
 impl<T> AdditiveHomomorphicScheme<FVCiphertext<T>, SecretKey<T>> for FV<T>
 where
     RqPoly<T>: FiniteRingElt,
@@ -314,8 +312,7 @@ where
         self.add_inplace(ct, &c_mask);
 
         // add large noise poly for noise flooding.
-        let elarge =
-            randutils::sample_gaussian_poly(self.context.clone(), self.flooding_stdev);
+        let elarge = randutils::sample_gaussian_poly(self.context.clone(), self.flooding_stdev);
         ct.1.add_inplace(&elarge);
     }
 }
@@ -323,7 +320,7 @@ where
 // constructor and random poly sampling
 impl<T> FV<T>
 where
-    T: SuperTrait<T>+ PartialEq + Serializable,
+    T: SuperTrait<T> + PartialEq + Serializable,
     RqPoly<T>: FiniteRingElt + NTT<T>,
 {
     pub fn new(n: usize, q: &T) -> Self {
@@ -345,7 +342,7 @@ where
             n,
             t: t.clone(),
             flooding_stdev: 2f64.powi(40),
-            delta: T::div(q, t), // &q/t,
+            delta: T::div(q, t),                 // &q/t,
             qdivtwo: T::div(q, &T::from(2_u32)), // &q/2,
             q: q.clone(),
             stdev: 3.2,
@@ -354,13 +351,13 @@ where
         }
     }
 
-    pub fn from_bytes(&self, bytes: &Vec<u8>) -> FVCiphertext<T>{
+    pub fn from_bytes(&self, bytes: &Vec<u8>) -> FVCiphertext<T> {
         let mut ct = FVCiphertext::<T>::from_bytes(bytes);
         self.set_context(&mut ct);
         ct
     }
 
-    fn set_context(&self, ctxt: &mut FVCiphertext<T>){
+    fn set_context(&self, ctxt: &mut FVCiphertext<T>) {
         ctxt.0.set_context(self.context.clone());
         ctxt.1.set_context(self.context.clone());
     }
@@ -375,7 +372,7 @@ impl FV<Scalar> {
 
     /// Construct a scheme with provided plaintext modulus.
     pub fn default_2048_with_plaintext_mod(t: u32) -> FV<Scalar> {
-        if t > 2u32.pow(10){
+        if t > 2u32.pow(10) {
             panic!("plain text modulus should not be more than 10 bits.")
         }
         let q = Scalar::new_modulus(18014398492704769u64);
@@ -406,8 +403,7 @@ impl FV<BigInt> {
     }
 }
 
-
-impl<T> KeyGeneration<FVCiphertext<T>,  SecretKey<T>> for FV<T>
+impl<T> KeyGeneration<FVCiphertext<T>, SecretKey<T>> for FV<T>
 where
     RqPoly<T>: FiniteRingElt,
     T: SuperTrait<T>,
@@ -431,7 +427,7 @@ where
     }
 }
 
-impl<T> EncryptionOfZeros<FVCiphertext<T>,  SecretKey<T>> for FV<T>
+impl<T> EncryptionOfZeros<FVCiphertext<T>, SecretKey<T>> for FV<T>
 where
     RqPoly<T>: FiniteRingElt,
     T: SuperTrait<T>,
@@ -502,13 +498,12 @@ where
     RqPoly<T>: FiniteRingElt,
     T: SuperTrait<T>,
 {
-    fn encrypt_sk(&self, pt: &DefaultFVPlaintext, sk: &SecretKey<T>) -> FVCiphertext<T>
-        {
-            let pt1 = self.convert_pt_u8_to_scalar(pt);
-            self.encrypt_sk(&pt1, sk)
-        }
+    fn encrypt_sk(&self, pt: &DefaultFVPlaintext, sk: &SecretKey<T>) -> FVCiphertext<T> {
+        let pt1 = self.convert_pt_u8_to_scalar(pt);
+        self.encrypt_sk(&pt1, sk)
+    }
 
-    fn decrypt(&self, ct: &FVCiphertext<T>, sk: &SecretKey<T>) -> DefaultFVPlaintext{
+    fn decrypt(&self, ct: &FVCiphertext<T>, sk: &SecretKey<T>) -> DefaultFVPlaintext {
         let pt1 = self.decrypt(ct, sk);
         self.convert_pt_scalar_to_u8(pt1)
     }
@@ -523,7 +518,6 @@ where
     fn encrypt_sk(&self, pt: &FVPlaintext<T>, sk: &SecretKey<T>) -> FVCiphertext<T> {
         let e = randutils::sample_gaussian_poly(self.context.clone(), self.stdev);
         let a = randutils::sample_uniform_poly(self.context.clone());
-
 
         let mut b = (self.poly_multiplier)(&a, &sk.0);
         b.add_inplace(&e);
@@ -546,8 +540,8 @@ where
         let qq: u64 = self.q.rep();
         let qdivtwo = qq / 2;
 
-        let my_closure = |elm: &T| -> T{
-            let mut tmp:u64 = elm.rep();
+        let my_closure = |elm: &T| -> T {
+            let mut tmp: u64 = elm.rep();
             tmp *= tt;
             tmp += qdivtwo;
             tmp /= qq;
@@ -555,9 +549,7 @@ where
             T::from(tmp)
         };
 
-        return phase.coeffs.iter()
-        .map(my_closure)
-        .collect();
+        return phase.coeffs.iter().map(my_closure).collect();
     }
 }
 
@@ -678,7 +670,7 @@ mod fv_scalar_tests {
 
         let w = vec![1; fv.n];
 
-        let v_minus_w = vec![2;fv.n];
+        let v_minus_w = vec![2; fv.n];
 
         // encrypt v
         let mut ct = fv.encrypt_sk(&v, &sk);
@@ -686,7 +678,7 @@ mod fv_scalar_tests {
         // ct_v - w.
         fv.sub_plain_inplace(&mut ct, &w);
 
-        let pt_after_sub : DefaultFVPlaintext= fv.decrypt(&ct, &sk);
+        let pt_after_sub: DefaultFVPlaintext = fv.decrypt(&ct, &sk);
 
         assert_eq!(pt_after_sub, v_minus_w);
     }
@@ -697,7 +689,7 @@ mod fv_scalar_tests {
         let fv = crate::default_with_plaintext_mod(t);
         let (pk, sk) = fv.generate_keypair();
         let plain_modulus = fv.t.clone();
-        let pt = vec![Scalar::from_u32(t-1, &plain_modulus); fv.n];
+        let pt = vec![Scalar::from_u32(t - 1, &plain_modulus); fv.n];
         let ct = fv.encrypt(&pt, &pk);
         let pt_actual: Vec<Scalar> = fv.decrypt(&ct, &sk);
         assert_eq!(pt_actual, pt);
@@ -709,13 +701,13 @@ mod fv_scalar_tests {
         let fv = crate::default_with_plaintext_mod(t);
         let (pk, sk) = fv.generate_keypair();
         let plain_modulus = fv.t.clone();
-        let v = vec![Scalar::from_u32(t-1, &plain_modulus); fv.n];
-        let w = vec![Scalar::from_u32(t-1, &plain_modulus); fv.n];
-        let v_plus_w = vec![Scalar::from_u32(t-2, &plain_modulus); fv.n];
+        let v = vec![Scalar::from_u32(t - 1, &plain_modulus); fv.n];
+        let w = vec![Scalar::from_u32(t - 1, &plain_modulus); fv.n];
+        let v_plus_w = vec![Scalar::from_u32(t - 2, &plain_modulus); fv.n];
         let mut ctv = fv.encrypt(&v, &pk);
         let ctw = fv.encrypt(&w, &pk);
         fv.add_inplace(&mut ctv, &ctw);
-        let pt_actual: Vec<Scalar>= fv.decrypt(&ctv, &sk);
+        let pt_actual: Vec<Scalar> = fv.decrypt(&ctv, &sk);
         assert_eq!(pt_actual, v_plus_w);
     }
 
@@ -725,7 +717,7 @@ mod fv_scalar_tests {
         let fv = crate::default_with_plaintext_mod(t);
         let (pk, sk) = fv.generate_keypair();
         let plain_modulus = fv.t.clone();
-        let v = vec![Scalar::from_u32(t-1, &plain_modulus); fv.n];
+        let v = vec![Scalar::from_u32(t - 1, &plain_modulus); fv.n];
         let w = vec![Scalar::from_u32(1, &plain_modulus); fv.n];
         let v_plus_w = vec![Scalar::from_u32(0, &plain_modulus); fv.n];
         let mut ct = fv.encrypt(&v, &pk);
