@@ -174,7 +174,7 @@ pub mod polyarith;
 #[cfg(feature = "bench")]
 pub mod rqpoly;
 #[cfg(not(feature = "bench"))]
-mod rqpoly;
+pub mod rqpoly;
 pub mod traits;
 mod serialize;
 mod utils;
