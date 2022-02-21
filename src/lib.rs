@@ -356,6 +356,15 @@ where
         self.set_context(&mut ct);
         ct
     }
+    pub fn from_bytes_secret_key(&self, bytes: &Vec<u8>) -> SecretKey<T> {
+        let mut ct = SecretKey::<T>::from_bytes(bytes);
+        self.set_context_secret_key(&mut ct);
+        ct
+    }
+
+    fn set_context_secret_key(&self, ctxt: &mut SecretKey<T>) {
+        ctxt.0.set_context(self.context.clone());
+    }
 
     fn set_context(&self, ctxt: &mut FVCiphertext<T>) {
         ctxt.0.set_context(self.context.clone());
