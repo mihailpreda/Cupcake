@@ -78,7 +78,7 @@ where
     T: Serializable + Clone,
 {
     fn to_bytes(&self) -> std::vec::Vec<u8> {
-        let mut bytes = self.to_bytes();
+        let bytes = self.0.to_bytes();
         bytes
     }
     fn from_bytes(bytes: &std::vec::Vec<u8>) -> Self {
