@@ -198,7 +198,7 @@ pub type FVCiphertext<T> = (RqPoly<T>, RqPoly<T>);
 pub type DefaultSchemeType = FV<Scalar>;
 
 /// SecretKey type
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct SecretKey<T>(RqPoly<T>);
 use rqpoly::{FiniteRingElt, RqPoly, RqPolyContext};
 

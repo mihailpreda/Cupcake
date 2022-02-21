@@ -6,7 +6,10 @@
 extern crate bencher;
 use bencher::Bencher;
 use cupcake::integer_arith::butterfly::{
-    butterfly, inverse_butterfly, lazy_butterfly, lazy_butterfly_u64,
+    butterfly,
+    inverse_butterfly,
+    lazy_butterfly_u64,
+    // lazy_butterfly,
 };
 use cupcake::integer_arith::scalar::Scalar;
 use cupcake::integer_arith::ArithUtils;
