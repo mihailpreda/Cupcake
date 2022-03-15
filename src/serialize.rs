@@ -28,6 +28,7 @@ impl Serializable for Scalar {
         let a: u64 = u64::from_be_bytes(bytes.as_slice().try_into().unwrap());
         Scalar::new(a)
     }
+    //TODO: implement u16, u32 serialize Scalar
 }
 
 impl<T> Serializable for RqPoly<T>
@@ -52,6 +53,7 @@ where
         }
         RqPoly::new_without_context(&coeffs, is_ntt_form)
     }
+    //TODO: implement u16, u32 serialize RqPoly<T>
 }
 
 impl<T> Serializable for FVCiphertext<T>
@@ -72,6 +74,7 @@ where
             RqPoly::from_bytes(&bytes[n..twon].to_vec()),
         )
     }
+    //TODO: implement u16, u32 serialize FVCiphertext<T>
 }
 impl<T> Serializable for SecretKey<T>
 where
@@ -85,6 +88,8 @@ where
         let n = bytes.len();
         SecretKey(RqPoly::from_bytes(&bytes[0..n].to_vec()))
     }
+
+    //TODO: implement u16, u32 serialize SecretKey<T>
 }
 
 #[cfg(test)]
