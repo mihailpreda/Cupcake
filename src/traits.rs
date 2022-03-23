@@ -63,6 +63,12 @@ pub trait Serializable {
     fn from_bytes(bytes: &Vec<u8>) -> Self;
 
     //TODO: implement u16, u32 traits
+
+    /// Serialize to a vector of u16.
+    fn to_bytes_u16(&self) -> Vec<u16>;
+
+    /// Deserialize from a vector of u16.
+    fn from_bytes_u16(bytes: &Vec<u16>) -> Self;
 }
 
 /// Number-theoretic transform (NTT) and fast polynomial multiplication based on NTT.

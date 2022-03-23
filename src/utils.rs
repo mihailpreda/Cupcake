@@ -29,6 +29,12 @@ pub(crate) fn bit_reverse(i: usize, n: usize) -> usize {
     j
 }
 
+//helper functions
+pub(crate) fn set_u16_le(a: &mut [u8], v: u16) {
+    a[0] = v as u8;
+    a[1] = (v >> 8) as u8;
+}
+
 // tests
 #[cfg(test)]
 mod tests {

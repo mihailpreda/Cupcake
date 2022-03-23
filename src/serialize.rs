@@ -29,6 +29,44 @@ impl Serializable for Scalar {
         Scalar::new(a)
     }
     //TODO: implement u16, u32 serialize Scalar
+
+    fn to_bytes_u16(&self) -> std::vec::Vec<u16> {
+        let bytes = self.rep().to_be_bytes();
+        let mut i = 0usize;
+        let mut vec: Vec<u16> = vec![0; 4];
+        loop {
+            if bytes.len() > i {
+                let buffer: [u8; 2] = [bytes[i], bytes[i + 1]];
+                let value = u16::from_be_bytes(buffer);
+                vec.push(value);
+                i += 2;
+            } else {
+                break;
+            }
+        }
+        vec
+    }
+
+    fn from_bytes_u16(bytes: &std::vec::Vec<u16>) -> Self {
+        let mut buffer: Vec<u8> = vec![0; 8];
+        for value in bytes {
+            buffer.extend_from_slice(&value.to_be_bytes());
+        }
+        let a: u64 = u64::from_be_bytes((&buffer[..]).try_into().unwrap());
+        // let a: u64 = u64::from_be_bytes(buffer.as_slice().try_into().unwrap());
+        Scalar::new(a)
+    }
+
+    // fn to_bytes_u32(&self) -> std::vec::Vec<u32> {
+    //     let bytes = self.rep().to_be_bytes();
+    //     let mut vec: Vec<u32> = vec![0; 8];
+    //     vec.copy_from_slice(&bytes);
+    //     vec
+    // }
+    // fn from_bytes_u32(bytes: &std::vec::Vec<u32>) -> Self {
+    //     let a: u64 = u64::from_be_bytes(bytes.as_slice().try_into().unwrap());
+    //     Scalar::new(a)
+    // }
 }
 
 impl<T> Serializable for RqPoly<T>
@@ -54,6 +92,25 @@ where
         RqPoly::new_without_context(&coeffs, is_ntt_form)
     }
     //TODO: implement u16, u32 serialize RqPoly<T>
+
+    fn to_bytes_u16(&self) -> std::vec::Vec<u16> {
+        let mut vec: Vec<u16> = vec![self.is_ntt_form as u16];
+        for coeff in &self.coeffs {
+            let mut bytes = coeff.to_bytes_u16();
+            vec.append(&mut bytes);
+        }
+        vec
+    }
+    fn from_bytes_u16(bytes: &std::vec::Vec<u16>) -> Self {
+        let mut coeffs = Vec::new();
+        let is_ntt_form = bytes[0] != 0;
+        let mut i: usize = 1;
+        while i + 8 <= bytes.len() {
+            coeffs.push(T::from_bytes_u16(&bytes[i..i + 16].to_vec()));
+            i += 8;
+        }
+        RqPoly::new_without_context(&coeffs, is_ntt_form)
+    }
 }
 
 impl<T> Serializable for FVCiphertext<T>
@@ -74,7 +131,23 @@ where
             RqPoly::from_bytes(&bytes[n..twon].to_vec()),
         )
     }
+
     //TODO: implement u16, u32 serialize FVCiphertext<T>
+
+    fn to_bytes_u16(&self) -> std::vec::Vec<u16> {
+        let mut ct0_bytes = self.0.to_bytes_u16();
+        let mut ct1_bytes = self.1.to_bytes_u16();
+        ct0_bytes.append(&mut ct1_bytes);
+        ct0_bytes
+    }
+    fn from_bytes_u16(bytes: &std::vec::Vec<u16>) -> Self {
+        let twon = bytes.len();
+        let n = twon / 2;
+        (
+            RqPoly::from_bytes_u16(&bytes[0..n].to_vec()),
+            RqPoly::from_bytes_u16(&bytes[n..twon].to_vec()),
+        )
+    }
 }
 impl<T> Serializable for SecretKey<T>
 where
@@ -90,6 +163,15 @@ where
     }
 
     //TODO: implement u16, u32 serialize SecretKey<T>
+
+    fn to_bytes_u16(&self) -> std::vec::Vec<u16> {
+        let bytes = self.0.to_bytes_u16();
+        bytes
+    }
+    fn from_bytes_u16(bytes: &std::vec::Vec<u16>) -> Self {
+        let n = bytes.len();
+        SecretKey(RqPoly::from_bytes_u16(&bytes[0..n].to_vec()))
+    }
 }
 
 #[cfg(test)]
