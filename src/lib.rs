@@ -361,17 +361,7 @@ where
         self.set_context_secret_key(&mut ct);
         ct
     }
-    //Todo
-    pub fn from_bytes_u16(&self, bytes: &Vec<u16>) -> FVCiphertext<T> {
-        let mut ct = FVCiphertext::<T>::from_bytes_u16(bytes);
-        self.set_context(&mut ct);
-        ct
-    }
-    pub fn from_bytes_secret_key_u16(&self, bytes: &Vec<u16>) -> SecretKey<T> {
-        let mut ct = SecretKey::<T>::from_bytes_u16(bytes);
-        self.set_context_secret_key(&mut ct);
-        ct
-    }
+
     fn set_context_secret_key(&self, ctxt: &mut SecretKey<T>) {
         ctxt.0.set_context(self.context.clone());
     }
